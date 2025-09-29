@@ -1,15 +1,25 @@
 import sqlite3
 from flask import Flask, g, render_template, request, session, flash, redirect, url_for, abort, jsonify
+from pathlib import Path
+from flask_sqlalchemy import SQLAlchemy
+
+basedir = Path(__file__).resolve().parent
 
 # configs
 DATABASE = "flaskr.db"
 USERNAME = "admin"
 PASSWORD = "admin"
 SECRET_KEY = "ece444_lab3"
+SQLALCHEMY_DATABASE_URI = f'sqlite:///{Path(basedir).joinpath(DATABASE)}'
+SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 app = Flask(__name__)
 
 app.config.from_object(__name__)
+
+db = SQLAlchemy(app)
+
+from project import models
 
 def connect_db(): # connects to database
   rv = sqlite3.connect(app.config["DATABASE"])
@@ -35,9 +45,7 @@ def close_db(error):
 
 @app.route("/")
 def index(): # searches database for entries and displays them
-  db = get_db()
-  cur = db.execute('select * from entries order by id desc')
-  entries = cur.fetchall()
+  entries = db.session.query(models.Post)
   return render_template('index.html', entries=entries)
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -62,11 +70,11 @@ def logout(): # user logout/session management
 
 @app.route("/add",  methods=["POST"])
 def add_entry(): # add new post to database
-  if not session.get("logged_in"):
+  if not session.get('logged_in'):
     abort(401)
-  db = get_db()
-  db.execute('insert into entries (title, text) values (?, ?)', [request.form['title'], request.form['text']])
-  db.commit()
+  new_entry = models.Post(request.form['title'], request.form['text'])
+  db.session.add(new_entry)
+  db.session.commit()
   flash('New entry was successfully posted')
   return redirect(url_for('index'))
 
@@ -74,10 +82,10 @@ def add_entry(): # add new post to database
 def delete_entry(post_id): # delete post from database
   result = {'status': 0, 'message': 'Error'}
   try:
-    db = get_db()
-    db.execute('delete from entries where id=' + post_id)
-    db.commit()
+    db.session.query(models.Post).filter_by(id=post_id).delete()
+    db.session.commit()
     result = {'status': 1, 'message': "Post Deleted"}
+    flash('The entry was deleted.')
   except Exception as e:
     result = {'status': 0, 'message': repr(e)}
   return jsonify(result)
