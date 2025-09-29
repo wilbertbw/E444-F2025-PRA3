@@ -1,4 +1,5 @@
 import os
+import json
 import pytest
 from pathlib import Path
 
@@ -54,3 +55,8 @@ def test_messages(client): # ensure that user can post messages
   assert b"No entries here so far" not in rv.data
   assert b"&lt;Hello&gt;" in rv.data
   assert b"<strong>HTML</strong> allowed here" in rv.data
+
+def test_delete_message(client): # ensure messages are deleted
+  rv = client.get("/delete/1")
+  data = json.loads(rv.data)
+  assert data["status"] == 1
