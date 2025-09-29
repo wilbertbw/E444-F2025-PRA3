@@ -2,6 +2,7 @@ import sqlite3
 from flask import Flask, g, render_template, request, session, flash, redirect, url_for, abort, jsonify
 from pathlib import Path
 from flask_sqlalchemy import SQLAlchemy
+from functools import wraps
 
 basedir = Path(__file__).resolve().parent
 
@@ -37,6 +38,15 @@ def get_db(): # open database connection
   if not hasattr(g, "sqlite_db"):
     g.sqlite_db = connect_db()
   return g.sqlite_db
+
+def login_required(f):
+  @wraps(f)
+  def decorated_function(*args, **kwargs):
+    if not session.get('logged_in'):
+      flash('Please log in.')
+      return jsonify({'status': 0, 'message': 'Please log in.'}), 401
+    return f(*args, **kwargs)
+  return decorated_function
 
 @app.teardown_appcontext # close database connection
 def close_db(error):
@@ -79,6 +89,7 @@ def add_entry(): # add new post to database
   return redirect(url_for('index'))
 
 @app.route("/delete/<post_id>", methods=['GET'])
+@login_required
 def delete_entry(post_id): # delete post from database
   result = {'status': 0, 'message': 'Error'}
   try:

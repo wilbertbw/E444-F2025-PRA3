@@ -61,6 +61,10 @@ def test_messages(client): # ensure that user can post messages
 def test_delete_message(client): # ensure messages are deleted
   rv = client.get("/delete/1")
   data = json.loads(rv.data)
+  assert data["status"] == 0
+  login(client, app.config["USERNAME"], app.config["PASSWORD"])
+  rv = client.get("/delete/1")
+  data = json.loads(rv.data)
   assert data["status"] == 1
 
 def test_search_message(client): # ensure search functions properly
