@@ -62,3 +62,17 @@ def test_delete_message(client): # ensure messages are deleted
   rv = client.get("/delete/1")
   data = json.loads(rv.data)
   assert data["status"] == 1
+
+def test_search_message(client): # ensure search functions properly
+  login(client, app.config["USERNAME"], app.config["PASSWORD"])
+  rv = client.post(
+    "/add", 
+    data=dict(title="<test>", text="this is the first test message"), 
+    follow_redirects=True
+  )
+  rv = client.get("/search/")
+  assert rv.status_code == 200
+  rv = client.get("/search/?query=test")
+  assert rv.status_code == 200
+  assert b"&lt;test&gt;" in rv.data
+  assert b"this is the first test message" in rv.data
